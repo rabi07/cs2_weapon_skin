@@ -1,78 +1,110 @@
-name: CI
+name: Build
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - '*'
+    paths-ignore:
+      - LICENSE
+      - README.md
+
   pull_request:
-    branches:
-      - main
+    paths-ignore:
+      - LICENSE
+      - README.md
+
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build
+    name: Build on ${{ matrix.os_short }}
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-latest]
+        # Compile on Linux & Windows.
+        os: 
+          - ubuntu-20.04
+          - windows-latest
+
         include:
-          - os: windows-2022
-          - os: ubuntu-latest
-            container: registry.gitlab.steamos.cloud/steamrt/sniper/platform
+          - os: ubuntu-20.04
+            os_short: linux
+          - os: windows-latest
+            os_short: win
     steps:
-      - name: Install apt packages
+      # Setup Python for AMBuild.
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      # Install dependencies
+      - name: Install AMBuild
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install git+https://github.com/alliedmodders/ambuild
+
+      - name: Install dependencies
         if: runner.os == 'Linux'
         run: |
-          apt update
-          apt install -y git python3 python3-setuptools clang
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y clang g++-multilib
 
+      - name: Select clang compiler
+        if: runner.os == 'Linux'
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+          clang --version
+          clang++ --version
+
+      - name: Find Visual C++ compilers and make all environment variables global (W)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          :: See https://github.com/microsoft/vswhere/wiki/Find-VC
+          for /f "usebackq delims=*" %%i in (`vswhere -latest -property installationPath`) do (
+            call "%%i"\Common7\Tools\vsdevcmd.bat -arch=x64 -host_arch=x64
+          )
+
+          :: Loop over all environment variables and make them global.
+          for /f "delims== tokens=1,2" %%a in ('set') do (
+            echo>>"%GITHUB_ENV%" %%a=%%b
+          )
+
+      # Checkout repos
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: cs2_weapon_skin
+          path: project
 
-      - name: Checkout Metamod
-        uses: actions/checkout@v4
-        with:
-          repository: alliedmodders/metamod-source
-          ref: master
-          path: mmsource-2.0
-          submodules: recursive
-
-      - name: Checkout HL2SDK
+      - name: Checkout hl2sdk-cs2
         uses: actions/checkout@v4
         with:
           repository: alliedmodders/hl2sdk
           ref: cs2
           path: hl2sdk-cs2
 
-      - name: Checkout AMBuild
+      - name: Checkout Metamod:Source
         uses: actions/checkout@v4
         with:
-          repository: alliedmodders/ambuild
-          path: ambuild
+          repository: alliedmodders/metamod-source
+          ref: master
+          path: metamod-source
 
-      - name: Install AMBuild
-        run: |
-          cd ambuild && python setup.py install && cd ..
-
+      # Build
       - name: Build
-        working-directory: cs2_weapon_skin
         shell: bash
         run: |
-          mkdir build && cd build
-          python ../configure.py --enable-optimize --sdks cs2
+          cd project && mkdir build && cd build
+          python ../configure.py --enable-optimize --sdks=cs2 --targets=x86_64
           ambuild
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}
-          path: cs2_weapon_skin/build/package
+          path: project/build/package
 
   release:
     name: Release
@@ -86,23 +118,12 @@ jobs:
 
       - name: Package
         run: |
-          version=`echo $GITHUB_REF | sed "s/refs\/tags\///"`
-          ls -Rall
-          if [ -d "./Linux/" ]; then
-            cd ./Linux/
-            tar -czf ../${{ github.event.repository.name }}-${version}-linux.tar.gz addons
-            cd -
-          fi
-          if [ -d "./Windows/" ]; then
-            cd ./Windows/
-            zip -r ../${{ github.event.repository.name }}-${version}-windows.zip addons
-            cd -
-          fi
-
+          7z a -mx9 linux.zip ./Linux/*
+          7z a -mx9 windows.zip ./Windows/*
       - name: Release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.event.repository.name }}-*
+          file: '*.zip'
           tag: ${{ github.ref }}
           file_glob: true
