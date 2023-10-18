@@ -33,7 +33,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: LuaUnlocker
+          path: cs2_weapon_skin
 
       - name: Checkout Metamod
         uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
           cd ambuild && python setup.py install && cd ..
 
       - name: Build
-        working-directory: LuaUnlocker
+        working-directory: cs2_weapon_skin
         shell: bash
         run: |
           mkdir build && cd build
@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}
-          path: LuaUnlocker/build/package
+          path: cs2_weapon_skin/build/package
 
   release:
     name: Release
