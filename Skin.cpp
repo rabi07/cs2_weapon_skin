@@ -12,8 +12,12 @@
 #include "sdk/CCSPlayer_ItemServices.h"
 #include "sdk/CSmokeGrenadeProjectile.h"
 #include <map>
+#ifdef _WIN32
 #include <Windows.h>
 #include <TlHelp32.h>
+#else
+#include "utils/module.h"
+#endif
 #include <string>
 
 Skin g_Skin;
@@ -35,11 +39,12 @@ typedef struct SkinParm
 	int m_nFallbackPaintKit;
 	int m_nFallbackSeed;
 	float m_flFallbackWear;
-};
+}SkinParm;;
 
-typedef void*(__fastcall* EntityRemove_t)(CGameEntitySystem*, void*, void*,uint64_t);
-typedef void(__fastcall* GiveNamedItem_t)(void* itemService,const char* pchName, void* iSubType,void* pScriptItem, void* a5,void* a6);
-typedef void(__fastcall* UTIL_ClientPrintAll_t)(int msg_dest, const char* msg_name, const char* param1, const char* param2, const char* param3, const char* param4);
+#ifdef _WIN32
+typedef void*(FASTCALL* EntityRemove_t)(CGameEntitySystem*, void*, void*,uint64_t);
+typedef void(FASTCALL* GiveNamedItem_t)(void* itemService,const char* pchName, void* iSubType,void* pScriptItem, void* a5,void* a6);
+typedef void(FASTCALL* UTIL_ClientPrintAll_t)(int msg_dest, const char* msg_name, const char* param1, const char* param2, const char* param3, const char* param4);
 
 extern EntityRemove_t FnEntityRemove;
 extern GiveNamedItem_t FnGiveNamedItem;
@@ -47,14 +52,20 @@ extern UTIL_ClientPrintAll_t FnUTIL_ClientPrintAll;
 EntityRemove_t FnEntityRemove;
 GiveNamedItem_t FnGiveNamedItem;
 UTIL_ClientPrintAll_t FnUTIL_ClientPrintAll;
+#else
+void (*FnEntityRemove)(CGameEntitySystem*, void*, void*,uint64_t) = nullptr;
+void (*FnGiveNamedItem)(void* itemService,const char* pchName, void* iSubType,void* pScriptItem, void* a5,void* a6) = nullptr;
+void (*FnUTIL_ClientPrintAll)(int msg_dest, const char* msg_name, const char* param1, const char* param2, const char* param3, const char* param4) = nullptr;
+#endif
 
 std::map<int, std::string> g_WeaponsMap;
-std::map<INT64, std::map<int, SkinParm>> g_PlayerSkins;
+std::map<uint64_t, std::map<int, SkinParm>> g_PlayerSkins;
 
 class GameSessionConfiguration_t { };
 SH_DECL_HOOK3_void(INetworkServerService, StartupServer, SH_NOATTRIB, 0, const GameSessionConfiguration_t&, ISource2WorldSession*, const char*);
 SH_DECL_HOOK3_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool, bool, bool);
 
+#ifdef _WIN32
 inline void* FindSignature(const char* modname,const char* sig)
 {
 	DWORD64 hModule = (DWORD64)GetModuleHandle(modname);
@@ -95,6 +106,7 @@ inline void* FindSignature(const char* modname,const char* sig)
 	}
 	return NULL;
 }
+#endif
 
 bool Skin::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
 {
@@ -122,7 +134,7 @@ bool Skin::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool lat
 	ConVar_Register(FCVAR_GAMEDLL);
 
 	g_WeaponsMap = { {26,"weapon_bizon"},{27,"weapon_mac10"},{34,"weapon_mp9"},{19,"weapon_p90"},{24,"weapon_ump45"},{7,"weapon_ak47"},{8,"weapon_aug"},{10,"weapon_famas"},{13,"weapon_galilar"},{16,"weapon_m4a1"},{60,"weapon_m4a1_silencer"},{39,"weapon_sg556"},{9,"weapon_awp"},{11,"weapon_g3sg1"},{38,"weapon_scar20"},{40,"weapon_ssg08"},{29,"weapon_mag7"},{35,"weapon_nova"},{29,"weapon_sawedoff"},{25,"weapon_xm1014"},{14,"weapon_m249"},{9,"weapon_awp"},{28,"weapon_negev"},{1,"weapon_deagle"},{2,"weapon_elite"},{3,"weapon_fiveseven"},{4,"weapon_glock"},{32,"weapon_hkp2000"},{36,"weapon_p250"},{30,"weapon_tec9"},{61,"weapon_usp_silencer"},{63,"weapon_cz75a"},{64,"weapon_revolver"}};
-	
+	#ifdef _WIN32	
 	byte* vscript = (byte*)FindSignature("vscript.dll", "\xBE\x01\x3F\x3F\x3F\x2B\xD6\x74\x61\x3B\xD6");
 	if(vscript)
 	{
@@ -131,6 +143,7 @@ bool Skin::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool lat
 		*(vscript + 1) = 2;
 		VirtualProtect(vscript, 2, pOld, &pOld);
 	}
+	#endif
 	return true;
 }
 
@@ -156,9 +169,16 @@ void Skin::NextFrame(std::function<void()> fn)
 
 void Skin::StartupServer(const GameSessionConfiguration_t& config, ISource2WorldSession*, const char*)
 {
+	#ifdef _WIN32
 	FnUTIL_ClientPrintAll = (UTIL_ClientPrintAll_t)FindSignature("server.dll", "\x48\x89\x5C\x24\x08\x48\x89\x6C\x24\x10\x48\x89\x74\x24\x18\x57\x48\x81\xEC\x70\x01\x3F\x3F\x8B\xE9");
 	FnGiveNamedItem = (GiveNamedItem_t)FindSignature("server.dll", "\x48\x89\x5C\x24\x18\x48\x89\x74\x24\x20\x55\x57\x41\x54\x41\x56\x41\x57\x48\x8D\x6C\x24\xD9");
 	FnEntityRemove = (EntityRemove_t)FindSignature("server.dll", "\x48\x85\xD2\x0F\x3F\x3F\x3F\x3F\x3F\x57\x48\x3F\x3F\x3F\x48\x89\x3F\x3F\x3F\x48\x8B\xF9\x48\x8B");
+	#else
+	CModule libserver(g_pSource2Server);
+	FnUTIL_ClientPrintAll = libserver.FindPatternSIMD("55 48 89 E5 41 57 49 89 D7 41 56 49 89 F6 41 55 41 89 FD").RCast< decltype(FnUTIL_ClientPrintAll) >();
+	FnGiveNamedItem = libserver.FindPatternSIMD("55 48 89 E5 41 57 41 56 49 89 CE 41 55 49 89 F5 41 54 49 89 D4 53 48 89").RCast<decltype(FnGiveNamedItem)>();
+	FnEntityRemove = libserver.FindPatternSIMD("48 85 F6 74 0B 48 8B 76 10 E9 B2 FE FF FF").RCast<decltype(FnEntityRemove)>();
+	#endif
 	g_pGameRules = nullptr;
 
 	static bool bDone = false;
@@ -275,6 +295,8 @@ CON_COMMAND_F(skin, "修改皮肤", FCVAR_CLIENT_CAN_EXECUTE)
 	pWeaponServices->RemoveWeapon(pPlayerWeapon);
 	FnEntityRemove(g_pGameEntitySystem,pPlayerWeapon,nullptr,-1);
 	FnGiveNamedItem(pPlayerPawn->m_pItemServices(),weapon_name->second.c_str(),nullptr,nullptr,nullptr,nullptr);
+	//CCSPlayer_ItemServices* pItemServices = static_cast<CCSPlayer_ItemServices*>(pPlayerPawn->m_pItemServices());
+	//pItemServices->GiveNamedItem(weapon_name->second.c_str());
 	// g_pGameRules->PlayerRespawn(static_cast<CCSPlayerPawn*>(pPlayerPawn));
 	META_CONPRINTF( "called by %lld\n", steamid);
 	sprintf(buf, " \x04 %s 已经成功修改皮肤 编号:%d 模板:%d 磨损:%f",pPlayerController->m_iszPlayerName(),atoi(args.Arg(1)),atoi(args.Arg(2)),atof(args.Arg(3)));

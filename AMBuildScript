@@ -227,6 +227,7 @@ class MMSPluginConfig(object):
         '-fno-strict-aliasing',
         '-Wall',
         '-Werror',
+	'-Wignored-attributes',
         '-Wno-uninitialized',
         '-Wno-unused',
         '-Wno-switch',
@@ -270,6 +271,8 @@ class MMSPluginConfig(object):
         cxx.cflags += [
           '-Wno-implicit-int-float-conversion',
           '-Wno-tautological-overlap-compare',
+	  '-Wignored-attributes',
+	  '-Wmissing-declarations'
         ]
 
     elif cxx.like('msvc'):

@@ -11,3 +11,4 @@ constexpr T CallVFunc(void* pThis, Args... args) noexcept
 #else
 #define WIN_LINUX(win, linux) linux
 #endif
+

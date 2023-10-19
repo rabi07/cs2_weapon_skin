@@ -15,8 +15,14 @@ for sdk_name in MMSPlugin.sdks:
 
     binary = MMSPlugin.HL2Library(builder, cxx, MMSPlugin.plugin_name, sdk)
 
+    if binary.compiler.family == 'gcc' or binary.compiler.family == 'clang':
+      binary.compiler.cxxflags += ['-Wno-register']
+      binary.compiler.cxxflags += ['--std=c++17']
+
     binary.sources += [
       'Skin.cpp',
+      'utils/module.cpp',
+      'utils/memaddr.cpp',
       os.path.join('sdk', 'schemasystem.cpp')
     ]
 

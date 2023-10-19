@@ -13,6 +13,15 @@
 #include <cstdint>
 #include <type_traits>
 
+#if defined(_WIN32)
+#define FASTCALL __fastcall
+#define THISCALL __thiscall
+#else
+#define FASTCALL __attribute__((fastcall))
+#define THISCALL
+#define strtok_s strtok_r
+#endif
+
 #define CALL_VIRTUAL(retType, idx, ...) \
     vmt::CallVirtual<retType>(idx, __VA_ARGS__)
 namespace vmt {
@@ -24,7 +33,7 @@ namespace vmt {
 
 	template <typename T, typename... Args>
 	inline T CallVirtual(uint32_t uIndex, void* pClass, Args... args) {
-		auto pFunc = GetVMethod<T(__thiscall*)(void*, Args...)>(uIndex, pClass);
+		auto pFunc = GetVMethod<T(THISCALL*)(void*, Args...)>(uIndex, pClass);
 		return pFunc(pClass, args...);
 	}
 }  // namespace vmt

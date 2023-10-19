@@ -1,4 +1,5 @@
 # cs2_weapon_skin
+cs2首个开源皮肤插件
 ### cs2首个开源皮肤插件
 ### 使用方法
 1. 下载 skin.zip 解压到 服务器 “game/csgo/” 文件夹中
