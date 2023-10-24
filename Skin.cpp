@@ -261,7 +261,7 @@ void CEntityListener::OnEntitySpawned(CEntityInstance* pEntity)
 	META_CONPRINTF( "steamId: %lld itemId: %d\n", steamid, weaponId);
 }
 
-CON_COMMAND_F(skin, "修改皮肤", FCVAR_CLIENT_CAN_EXECUTE)
+CON_COMMAND_F(skin, "Modify skin", FCVAR_CLIENT_CAN_EXECUTE)
 {
 	if(context.GetPlayerSlot() == -1)return;
 	CCSPlayerController* pPlayerController = (CCSPlayerController*)g_pEntitySystem->GetBaseEntity((CEntityIndex)(context.GetPlayerSlot().Get() + 1));
@@ -271,7 +271,7 @@ CON_COMMAND_F(skin, "修改皮肤", FCVAR_CLIENT_CAN_EXECUTE)
 	char buf[255] = {0};
 	if(args.ArgC() != 4)
 	{
-		sprintf(buf, " \x04 %s 你使用skin命令修改皮肤需要三个参数!",pPlayerController->m_iszPlayerName());
+		sprintf(buf, " \x04 %s You need three parameters to modify the skin using the skin command. Skin number , Patten , Flot!",pPlayerController->m_iszPlayerName());
 		FnUTIL_ClientPrintAll(3, buf,nullptr, nullptr, nullptr, nullptr);
 		return;
 	}
@@ -299,7 +299,7 @@ CON_COMMAND_F(skin, "修改皮肤", FCVAR_CLIENT_CAN_EXECUTE)
 	//pItemServices->GiveNamedItem(weapon_name->second.c_str());
 	// g_pGameRules->PlayerRespawn(static_cast<CCSPlayerPawn*>(pPlayerPawn));
 	META_CONPRINTF( "called by %lld\n", steamid);
-	sprintf(buf, " \x04 %s 已经成功修改皮肤 编号:%d 模板:%d 磨损:%f",pPlayerController->m_iszPlayerName(),atoi(args.Arg(1)),atoi(args.Arg(2)),atof(args.Arg(3)));
+	sprintf(buf, " \x04 %s The skin has been modified successfully. Number: %d Template: %d Wear:%f",pPlayerController->m_iszPlayerName(),atoi(args.Arg(1)),atoi(args.Arg(2)),atof(args.Arg(3)));
 	FnUTIL_ClientPrintAll(3, buf,nullptr, nullptr, nullptr, nullptr);
 }
 
