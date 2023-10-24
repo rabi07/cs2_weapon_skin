@@ -1,7 +1,8 @@
-# cs2_weapon_skin
-cs2首个开源皮肤插件
-### cs2首个开源皮肤插件
-### 使用方法
-1. 下载 skin.zip 解压到 服务器 “game/csgo/” 文件夹中
-2. 运行服务器
-3. 进入服务器后在控制台输入 skin 编号 模板 磨损 即可预览皮肤
+cs2_weapon_skin
+cs2's first open source skin plug-in
+
+cs2's first open source skin plug-in
+Instructions
+Download skin.zip and extract it to the server "game/csgo/" folder
+Run the server
+After entering the server, enter the skin number template in the console to preview the skin.
